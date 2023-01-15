@@ -1,34 +1,26 @@
 package com.example.fixplayground.client;
 
 import com.example.fixplayground.handler.FixMessageHandler;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import quickfix.*;
-import quickfix.fix42.MarketDataSnapshotFullRefresh;
 
-import javax.annotation.PostConstruct;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class FixClientApplication implements Application {
-
-    private final Map<Class<?>, FixMessageHandler> handlers = new HashMap<>();
-
-    private final FixMessageHandler[] fixMessageHandlers;
-
+    private final Map<Class<?>, FixMessageHandler> handlers;
     private SessionID sessionId;
 
-    @PostConstruct
-    private void init() {
-        for (FixMessageHandler h : fixMessageHandlers) {
-            handlers.put(h.getMessageType(), h);
-        }
+    @Autowired
+    public FixClientApplication(List<FixMessageHandler> fixMessageHandlers) {
+        handlers = fixMessageHandlers.stream()
+                .collect(Collectors.toMap(FixMessageHandler::getMessageType, handler -> handler));
     }
 
     @Override
@@ -72,7 +64,7 @@ public class FixClientApplication implements Application {
 
 
         if (!handlers.containsKey(message.getClass())) {
-            throw new RuntimeException(String.format("Unsupported handler %s", message.getClass().getName()));
+            throw new UnsupportedOperationException(String.format("Unsupported handler %s", message.getClass().getName()));
         }
         try {
             handlers.get(message.getClass())
